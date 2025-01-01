@@ -1,3 +1,5 @@
+
+
 import mongoose, { Document, Schema, Model } from "mongoose";
 import { IUser } from "./user.model";
 
@@ -23,7 +25,7 @@ export interface ICourseData extends Document {
   title: string;
   description: string;
   videoUrl: string;
-  videoThumbnail: object;
+  // videoThumbnail: object;
   videoSection: string;
   videoLength: number;
   videoPlayer: string;
@@ -72,6 +74,7 @@ export const commentSchema: Schema<IComment> = new Schema<IComment>({
   questionReplies: [Object],
 });
 
+// this is for the course purchased student or users
 export const courseDataSchema: Schema<ICourseData> = new Schema<ICourseData>({
   title: String,
   description: String,
@@ -84,6 +87,7 @@ export const courseDataSchema: Schema<ICourseData> = new Schema<ICourseData>({
   suggestion: String,
   questions: [commentSchema],
 });
+
 
 const courseSchema: Schema<ICourse> = new mongoose.Schema<ICourse>({
   name: {
@@ -98,7 +102,9 @@ const courseSchema: Schema<ICourse> = new mongoose.Schema<ICourse>({
     type: Number,
     required: true,
   },
-  estimatedPrice: Number,
+  estimatedPrice: {
+    type : Number,
+  },
   thumbnail: {
     public_id: {
       type: String,

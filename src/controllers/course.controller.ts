@@ -1,3 +1,4 @@
+//
 import { NextFunction, Request, Response } from "express";
 import { CatchAsyncHandler } from "../middleware/catchAsyncError";
 import { courseModel } from "../models/course.model";
@@ -8,8 +9,6 @@ import mongoose from "mongoose";
 import ejs from "ejs";
 import path from "path";
 import sendMail from "../utils/sendMail";
-import { createSemanticDiagnosticsBuilderProgram } from "typescript";
-import exp from "constants";
 
 export const uploadCourse = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -397,14 +396,14 @@ export const addReplyToReview = CatchAsyncHandler(
         comment,
       };
 
-      if(!review.commentReplies){
-        review.commentReplies = []
+      if (!review.commentReplies) {
+        review.commentReplies = [];
       }
 
       review.commentReplies?.push(replyData);
-     
+
       await course.save();
-     
+
       res.status(200).json({
         success: true,
         course,

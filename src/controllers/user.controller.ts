@@ -12,21 +12,21 @@ import {
   refreshTokenOptions,
   sendToken,
 } from "../utils/jwt";
-import { access, cp } from "fs";
 import { redis } from "../utils/redis";
-import Redis, { RedisKey } from "ioredis";
+import { RedisKey } from "ioredis";
 import { getUserById } from "../../services/user.service";
 // import cloudinary from "cloudinary"
 
 
+
 // register our user
+
 interface IRegister {
   name: string;
   email: string;
   password: string;
   avatar?: string;
 }
-
 export const registerUser = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -82,12 +82,12 @@ export const registerUser = CatchAsyncHandler(
   }
 );
 
+
 // activate user account
 interface IActivationRequest {
   activation_token: string;
   activation_code: string;
 }
-
 export const activateUser = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -117,7 +117,7 @@ export const activateUser = CatchAsyncHandler(
       const existUser = await userModel.findOne({ email });
 
       if (existUser) {
-        return next(new ErrorHandler("User already exist", 400));
+        return next(new ErrorHandler("Email already exist", 400));
       }
 
       const user = await userModel.create({
@@ -129,6 +129,7 @@ export const activateUser = CatchAsyncHandler(
       res.status(201).json({
         success: true,
         message: `User Activated Successfully `,
+        user
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
@@ -136,11 +137,11 @@ export const activateUser = CatchAsyncHandler(
   }
 );
 
+// Login an User
 interface ILoginUser {
   email: string;
   password: string;
 }
-
 export const loginUser = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -164,7 +165,10 @@ export const loginUser = CatchAsyncHandler(
         return next(new ErrorHandler("Email & Password is incorrect", 400));
       }
 
+      // File is about sending the token to the user with redis cache
+      
       sendToken(user, 200, res);
+
     } catch (error: any) {
       console.log(error);
       return next(new ErrorHandler(error.message, 400));
@@ -193,6 +197,7 @@ export const logoutUser = CatchAsyncHandler(
   }
 );
 
+
 // update accessToken
 export const updateAccessToken = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -200,6 +205,7 @@ export const updateAccessToken = CatchAsyncHandler(
       const refresh_token = req.cookies.refresh_token as string;
 
       if (!refresh_token) {
+        return next(new ErrorHandler("Access token not found", 400));
       }
 
       const decoded = jwt.verify(
@@ -212,7 +218,7 @@ export const updateAccessToken = CatchAsyncHandler(
         return next(new ErrorHandler(msg, 400));
       }
 
-      const session = await redis.get(decoded.id as string);
+      const session = await redis.get(decoded.id as RedisKey);
 
       if (!session) {
         return next(new ErrorHandler(msg, 400));
@@ -220,21 +226,23 @@ export const updateAccessToken = CatchAsyncHandler(
 
       const user = JSON.parse(session);
 
-      const accessToken = jwt.sign(
-        { id: user._id },
-        process.env.ACCESS_TOKEN_SECRET as string,
-        {
-          expiresIn: (process.env.ACCESS_TOKEN_EXPIRY as string) || "",
-        }
-      );
+      const accessToken = await user.generateAccessToken();
+      const refreshToken = await user.generateRefreshToken();
+      // const accessToken = jwt.sign(
+      //   { id: user._id },
+      //   process.env.ACCESS_TOKEN_SECRET as string,
+      //   {
+      //     expiresIn: "5m",
+      //   }
+      // );
 
-      const refreshToken = jwt.sign(
-        { id: user._id },
-        process.env.REFRESH_TOKEN_SECRET as string,
-        {
-          expiresIn: (process.env.REFRESH_TOKEN_EXPIRY as string) || "",
-        }
-      );
+      // const refreshToken = jwt.sign(
+      //   { id: user._id },
+      //   process.env.REFRESH_TOKEN_SECRET as string,
+      //   {
+      //     expiresIn: "3d",
+      //   }
+      // );
 
       req.user = user;
 
@@ -251,6 +259,7 @@ export const updateAccessToken = CatchAsyncHandler(
     }
   }
 );
+
 
 // get user info
 export const getUserInfo = CatchAsyncHandler(
@@ -274,6 +283,7 @@ interface ISocialAuth {
 export const socialAuth = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+
       const { email, name, avatar } = req.body as ISocialAuth;
 
       const user = await userModel.findOne({ email });
@@ -295,12 +305,13 @@ export const socialAuth = CatchAsyncHandler(
   }
 );
 
+
+// I'm getting confuse in put and patch request...
 // update use info
 interface IUpdateUserInfo {
   name?: string;
   email?: string;
 }
-
 export const updateUserInfo = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -336,13 +347,13 @@ export const updateUserInfo = CatchAsyncHandler(
   }
 );
 
+
 // update user password
 interface IUpdateUserPassword {
   oldPassword: string;
   newPassword: string;
   confirmPassword: string;
 }
-
 export const updateUserPassword = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -363,6 +374,8 @@ export const updateUserPassword = CatchAsyncHandler(
       }
 
       const user = await userModel.findById(userId).select("+password");
+      
+      // in case of the user is socialAuth
       if (user?.password == undefined) {
         return next(new ErrorHandler("Invalid User", 400));
       }
@@ -378,28 +391,30 @@ export const updateUserPassword = CatchAsyncHandler(
       user.password = newPassword;
       await user.save();
 
-      await redis.set(userId as RedisKey, JSON.stringify(user));
+      await redis.set(userId as RedisKey, JSON.stringify(user) as any);
 
       res.status(201).json({
         success: true,
         user,
       });
-    } catch (error: any) {
+    } catch (error:any) {
       return next(new ErrorHandler(error.message, 400));
     }
   }
 );
 
+
 // update profile picture | Avatar
 interface IUpdateUserAvatar {
   avatar: string;
 }
-
 export const updateProfilePicture = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { avatar } = req.body as IUpdateUserAvatar
+      
       const userId = req.user?._id
+
       const user = await userModel.findById(userId);
 
       // if user have avatar then call this
