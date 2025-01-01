@@ -68,8 +68,8 @@ const userSchema: Schema<IUser> = new mongoose.Schema<IUser>(
         courseId: {
           // type: Schema.Types.ObjectId,
           // ref: "Course"
-          courseId: String,
-          // type : String
+          // courseId: String,
+          type : String
         },
       },
     ],

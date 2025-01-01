@@ -21,8 +21,16 @@ app.use(
 
 import userRoutes from "./routes/user.route";
 import courseRoutes from "./routes/course.route";
+import orderRouter from "./routes/order.route"
+import notificationRouter from "./routes/notification.route"
+import analyticsRouter from "./routes/analytics.route"
+
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
+app.use("/api/v1/order", orderRouter);
+app.use("/api/v1/notification", notificationRouter);
+app.use("/api/v1/analytics", analyticsRouter);
+
 
 // testing api
 // app.get('/', (req:Request, res:Response) => {

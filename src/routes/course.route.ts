@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { addAnswer, addQuestion, addReview, editCourse, getAllCourses, getCourseByUser, getSingleCourse, uploadCourse } from "../controllers/course.controller";
+import { addAnswer, addQuestion, addReview, deleteCourse, editCourse, getAllCourses, getCourse, getCourseByUser,  getSingleCourse, uploadCourse } from "../controllers/course.controller";
 import { authorizedRole, isAuthenticated } from "../middleware/auth";
 
 const router = Router();
@@ -27,8 +27,8 @@ router.get(
 
 // get All course --- without purchasing
 router.get(
-  "/get-all-course",
-  getAllCourses
+  "/get-course",
+  getCourse
 );
 
 
@@ -65,5 +65,24 @@ router.put(
   authorizedRole("admin"),
   addReview
 );
+
+router.get(
+  "/get-all-courses",
+  isAuthenticated,
+  authorizedRole("admin"),
+  getAllCourses
+);
+
+router.delete(
+  "/delete-course/:id",
+  isAuthenticated,
+  authorizedRole("admin"),
+  deleteCourse
+);
+
+
+
+
+
 
 export default router;

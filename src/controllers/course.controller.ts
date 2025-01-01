@@ -9,6 +9,9 @@ import mongoose from "mongoose";
 import ejs from "ejs";
 import path from "path";
 import sendMail from "../utils/sendMail";
+import cloudinary from "cloudinary";
+import { notificationModel } from "../models/notification.model";
+
 
 export const uploadCourse = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -106,7 +109,7 @@ export const getSingleCourse = CatchAsyncHandler(
 );
 
 // get All course --- without purchasing
-export const getAllCourses = CatchAsyncHandler(
+export const getCourse = CatchAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const isCacheExist = await redis.get("allCourse");
@@ -203,6 +206,12 @@ export const addQuestion = CatchAsyncHandler(
       // add this question to our courseContent
       courseContent.questions.push(newQuestion);
 
+      await notificationModel.create({
+        user: req.user?._id,
+        title: "New Question Received",
+        message: `${req.user?.name} has asked a question in ${courseContent.title} At this course ${course?.name}`,
+      })
+
       // save the updated course
       await course?.save();
 
@@ -265,6 +274,12 @@ export const addAnswer = CatchAsyncHandler(
 
       if (req.user?._id === question.user?._id) {
         // TODO: create a notification
+        await notificationModel.create({
+          user: req.user?._id,
+          title: "New Answer Received",
+          message: `${req.user?.name} has answered a question in ${courseContent.title} At this course ${course?.name}`,
+        })
+
       } else {
         const data = {
           name: question.user.name,
@@ -413,3 +428,48 @@ export const addReplyToReview = CatchAsyncHandler(
     }
   }
 );
+
+
+// get All courses
+export const getAllCourses = CatchAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const course = await courseModel.find().sort({ createdAt: -1 });
+
+      res.status(200).json({
+        success: true,
+        course,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
+// delete course -- by admin
+export const deleteCourse = CatchAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const courseId = req.params.id;
+
+      const course = await courseModel.findById(courseId);
+
+      if(!course){
+        return next(new ErrorHandler("Course not found", 404));
+      }
+
+      await course.deleteOne({courseId});
+      
+      await redis.del(courseId);
+
+      res.status(200).json({
+        success: true,
+        message : "Course deleted successfully",
+        course,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+

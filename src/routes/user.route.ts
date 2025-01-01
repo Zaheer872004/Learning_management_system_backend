@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { 
   activateUser, 
+  deleteUser, 
+  deleteUserByOwn, 
+  getAllUsers, 
   getUserInfo, 
   loginUser, 
   logoutUser, 
@@ -9,9 +12,10 @@ import {
   updateAccessToken,
   updateProfilePicture,
   updateUserInfo,
-  updateUserPassword
+  updateUserPassword,
+  updateUserRole
 } from '../controllers/user.controller';
-import { isAuthenticated } from '../middleware/auth';
+import { authorizedRole, isAuthenticated } from '../middleware/auth';
 
 const router = Router();
 
@@ -34,6 +38,18 @@ router.put("/update-info",isAuthenticated,updateUserInfo)
 router.put("/update-password",isAuthenticated,updateUserPassword)
 
 router.put("/update-avatar",isAuthenticated,updateProfilePicture)
+
+router.get("/get-all-users",isAuthenticated,authorizedRole("admin"),getAllUsers)
+
+router.put("/update-user-role",isAuthenticated,authorizedRole("admin"),updateUserRole)
+
+// delete user by own
+router.delete("/delete-user-own",isAuthenticated,deleteUserByOwn)
+
+router.delete("/delete-user/:id",isAuthenticated,authorizedRole("admin"),deleteUser)
+
+
+
 
 
 export default router;
